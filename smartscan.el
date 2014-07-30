@@ -91,17 +91,30 @@ either `smartscan-symbol-go-forward' or `smartscan-symbol-go-backward'")
           (const :tag "Word" "word")
           (const :tag "Symbol" "symbol")))
 
+(defvar smartscan-default-syntax-table (let ((table (make-syntax-table)))
+                                         ;; we need this outside the if-statement as using the word
+                                         ;; parameter with `thing-at-point' will treat underscore as a word
+                                         ;; separator.
+                                         (modify-syntax-entry ?_ "w" table)
+                                         (modify-syntax-entry ?- "w" table)
+                                         table))
+
+(defvar smartscan-cc-mode-syntax-table  (let ((table (make-syntax-table)))
+                                          (modify-syntax-entry ?_ "w" table)
+                                          table))
+
+(defvar smartscan-syntax-tables `((c++-mode . ,smartscan-cc-mode-syntax-table)
+                                  (cc-mode . ,smartscan-cc-mode-syntax-table)
+                                  (c-mode . ,smartscan-cc-mode-syntax-table)
+                                  (t . ,smartscan-default-syntax-table)))
+
 (defmacro smartscan-with-symbol (body)
   "Macro that initialises the syntax table"
   (declare (indent defun))
-  `(with-syntax-table (make-syntax-table)
+  `(with-syntax-table (or (cdr (assoc major-mode smartscan-syntax-tables))
+                          (cdr (assoc t smartscan-syntax-tables)))
      (if smartscan-use-extended-syntax
          (modify-syntax-entry ?. "w"))
-     ;; we need this outside the if-statement as using the word
-     ;; parameter with `thing-at-point' will treat underscore as a word
-     ;; separator.
-     (modify-syntax-entry ?_ "w")
-     (modify-syntax-entry ?- "w")
      ,body))
 
 (defun smartscan-symbol-goto (name direction)
